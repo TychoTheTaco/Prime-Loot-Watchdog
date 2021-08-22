@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Twitch Prime Loot</title>
+    </head>
+    <body style="text-align: center;">
+        <p style="font-size: 1.3em;">
+            There are new Twitch Prime rewards!
+        </p>
+        <% for (const journey of Object.values(journeys)) { %>
+
+            <div>
+                <div style="margin: 0.5rem 0; display: inline-block;">
+
+                    <div style="margin: 0.2rem;">
+                        <%= journey['journey']['assets']['title'] %>
+                    </div>
+
+                    <% for (const offer of journey['offers']) { %>
+
+                        <table cellspacing="0" cellpadding="0" style="color: antiquewhite; border-spacing: 0; background-color: darkslateblue; border-radius: 0.6rem; display: inline-flex; flex-direction: column; width: 128px; overflow: hidden;">
+
+                            <tr>
+                                <td>
+                                    <a href="<%= offer['url'] %>">
+                                        <img src="<%= offer['image'] %>" alt="" width="128"/>
+                                    </a>
+                                </td>
+                            </tr>
+
+                            <tr style="font-weight: bold;">
+                                <td>
+                                    <%= offer['title'] + ' ' + offer['subtitle'] %>
+                                </td>
+                            </tr>
+
+                        </table>
+
+                    <% } %>
+
+                </div>
+            </div>
+
+        <% } %>
+    </body>
+</html>
