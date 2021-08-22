@@ -1,4 +1,4 @@
-# Prime-Loot-Watchdog
+# Prime Loot Watchdog
 
 A Node.js bot for notifying you of new [Amazon Prime loot](https://gaming.amazon.com/home).
 
