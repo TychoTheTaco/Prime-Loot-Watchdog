@@ -6,7 +6,7 @@ module.exports = {
         const page = await browser.newPage();
         await page.goto('https://gaming.amazon.com/home');
         const response = await page.waitForResponse(response => {
-            return (response.url().startsWith('https://gaming.amazon.com/graphql?') && JSON.parse(response.request().postData())['operationName'] === 'OffersContext_WithEligibilityAndCode_Offers');
+            return (response.url().startsWith('https://gaming.amazon.com/graphql?') && JSON.parse(response.request().postData())['operationName'] === 'OffersContext_Offers');
         });
         const primeOffers = (await response.json())['data']['primeOffers'];
         await page.close();
@@ -17,7 +17,7 @@ module.exports = {
         const page = await browser.newPage();
         await page.goto(offer['content']['externalURL']);
         const response = await page.waitForResponse(response => {
-            return (response.url().startsWith('https://gaming.amazon.com/graphql?') && JSON.parse(response.request().postData())['operationName'] === 'OfferDetail_Journey_With_Eligibility_OrderInformation');
+            return (response.url().startsWith('https://gaming.amazon.com/graphql?') && JSON.parse(response.request().postData())['operationName'] === 'OfferDetail_Journey');
         });
         const journey = (await response.json())['data']['journey'];
         await page.close();

@@ -31,6 +31,11 @@ async function getPrimeOffers(browser) {
 
         if (primeOffer['deliveryMethod'] === 'EXTERNAL_OFFER') {
 
+            // Ignore Luna offers
+            if (primeOffer['content']['externalURL'].startsWith('https://www.amazon.com/luna')){
+                continue;
+            }
+
             const journey = await twitch.getJourney(browser, primeOffer);
 
             for (const journeyOffer of journey['offers']) {
