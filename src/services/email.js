@@ -84,6 +84,7 @@ module.exports = {
                     }
 
                 }).catch((error) => {
+                    console.error(error);
                     console.error('Failed to send email to', recipient);
                 });
             }
