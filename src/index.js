@@ -4,6 +4,7 @@ const fs = require("fs");
 
 const {ArgumentParser} = require("argparse");
 const puppeteer = require("puppeteer-extra");
+const TimeoutError = require('puppeteer').errors.TimeoutError;
 
 const twitch = require('./twitch');
 const {EmailService} = require('./services/email');
@@ -36,7 +37,16 @@ async function getPrimeOffers(browser) {
                 continue;
             }
 
-            const journey = await twitch.getJourney(browser, primeOffer);
+            let journey;
+            try {
+                journey = await twitch.getJourney(browser, primeOffer);
+            } catch (error){
+                if (error instanceof TimeoutError){
+                    console.error('Timeout when getting journey from URL:', primeOffer['content']['externalURL'])
+                    continue;
+                }
+                throw error;
+            }
 
             for (const journeyOffer of journey['offers']) {
 
