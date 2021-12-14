@@ -8,7 +8,7 @@ module.exports = {
         const response = await page.waitForResponse(response => {
             if (response.url().startsWith('https://gaming.amazon.com/graphql?')) {
                 const operationName = JSON.parse(response.request().postData())['operationName'];
-                if (['OffersContext_Offers'].includes(operationName)) {
+                if (['OffersContext_Offers', 'OffersContext_Offers_And_Items'].includes(operationName)) {
                     return true;
                 }
             }
