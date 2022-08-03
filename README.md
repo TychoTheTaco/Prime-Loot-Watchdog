@@ -6,7 +6,8 @@ A Node.js bot for notifying you of new [Amazon Prime loot](https://gaming.amazon
 
 1) Install [Node.js](https://nodejs.org/)
 2) Install this package: `npm install .`
-3) Start the bot with `node src/index.js`
+3) Compile `tsc`
+4) Start the bot with `node dist/index.js`
 
 ### Configuration
 

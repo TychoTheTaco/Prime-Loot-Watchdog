@@ -1,3 +1,8 @@
+# Node modules
 node_modules
 
-config.json
+# Build output
+dist
+
+# Config files
+config*.json
