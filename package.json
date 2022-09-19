@@ -5,7 +5,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "compile": "tsc --pretty",
+    "start": "node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +17,7 @@
     "axios": "^0.27.2",
     "ejs": "^3.1.6",
     "nodemailer": "^6.6.3",
-    "puppeteer": "^10.2.0",
+    "puppeteer": "^16.0.0",
     "puppeteer-extra": "^3.1.18",
     "winston": "^3.8.1"
   },

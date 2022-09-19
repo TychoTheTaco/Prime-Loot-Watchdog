@@ -18,22 +18,26 @@ export interface PrimeOffer {
 
 export async function getPrimeOffers(browser: Browser): Promise<PrimeOffer[]> {
     const page = await browser.newPage();
-    await page.goto('https://gaming.amazon.com/home');
-    const response = await page.waitForResponse(response => {
-        if (response.url().startsWith('https://gaming.amazon.com/graphql?')) {
-            const data = response.request().postData();
-            if (data) {
-                const payload = JSON.parse(data) as GQLRequestPayload;
-                if (payload.operationName.startsWith("OffersContext_Offers")) {
-                    return true;
+    try {
+        await page.goto('https://gaming.amazon.com/home');
+        const response = await page.waitForResponse(response => {
+            if (response.url().startsWith('https://gaming.amazon.com/graphql?')) {
+                const data = response.request().postData();
+                if (data) {
+                    const payload = JSON.parse(data) as GQLRequestPayload;
+                    if (payload.operationName.startsWith("OffersContext_Offers")) {
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    });
-    const primeOffers = (await response.json())['data']['primeOffers'];
-    await page.close();
-    return primeOffers;
+            return false;
+        });
+        const primeOffers = (await response.json())['data']['primeOffers'];
+        await page.close();
+        return primeOffers;
+    } finally {
+        await page.close();
+    }
 }
 
 export interface Journey {
@@ -66,22 +70,26 @@ export interface JourneyOffer {
 
 export async function getJourney(browser: Browser, offer: PrimeOffer): Promise<Journey> {
     const page = await browser.newPage();
-    await page.goto(offer.content.externalURL);
-    const response = await page.waitForResponse(response => {
-        if (response.url().startsWith('https://gaming.amazon.com/graphql?')) {
-            const data = response.request().postData();
-            if (data) {
-                const payload = JSON.parse(data) as GQLRequestPayload;
-                if (payload.operationName.startsWith("OfferDetail_Journey")) {
-                    return true;
+    try {
+        await page.goto(offer.content.externalURL);
+        const response = await page.waitForResponse(response => {
+            if (response.url().startsWith('https://gaming.amazon.com/graphql?')) {
+                const data = response.request().postData();
+                if (data) {
+                    const payload = JSON.parse(data) as GQLRequestPayload;
+                    if (payload.operationName.startsWith("OfferDetail_Journey")) {
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    });
-    const journey = (await response.json())['data']['journey'];
-    await page.close();
-    return journey;
+            return false;
+        });
+        const journey = (await response.json())['data']['journey'];
+        await page.close();
+        return journey;
+    } finally {
+        await page.close();
+    }
 }
 
 export default {
