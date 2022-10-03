@@ -32,9 +32,7 @@ export async function getPrimeOffers(browser: Browser): Promise<PrimeOffer[]> {
             }
             return false;
         });
-        const primeOffers = (await response.json())['data']['primeOffers'];
-        await page.close();
-        return primeOffers;
+        return (await response.json())['data']['primeOffers'];
     } finally {
         await page.close();
     }
@@ -84,9 +82,7 @@ export async function getJourney(browser: Browser, offer: PrimeOffer): Promise<J
             }
             return false;
         });
-        const journey = (await response.json())['data']['journey'];
-        await page.close();
-        return journey;
+        return (await response.json())['data']['journey'];
     } finally {
         await page.close();
     }
