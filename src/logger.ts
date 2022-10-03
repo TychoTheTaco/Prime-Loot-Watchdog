@@ -19,7 +19,8 @@ const logger = createLogger({
             format: format.colorize({
                 colors: {info: "white"},
                 all: true
-            })
+            }),
+            level: "debug"
         })
     ]
 });

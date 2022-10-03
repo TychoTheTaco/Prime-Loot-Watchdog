@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
 import {ArgumentParser} from "argparse";
-import puppeteer from "puppeteer";
+import puppeteer, {PuppeteerLaunchOptions} from "puppeteer";
 
 import {EmailNotifier} from "./notifiers/email.js";
 import {DiscordNotifier} from "./notifiers/discord.js";
@@ -59,8 +59,17 @@ if (config.notifiers.discord) {
     notifiers.push(new DiscordNotifier(config.notifiers.discord));
 }
 
+function isInsideDocker(): boolean {
+    return fs.existsSync("/.dockerenv");
+}
+
 async function main() {
-    const browser = await puppeteer.launch();
+    const options: PuppeteerLaunchOptions = {};
+    if (isInsideDocker()) {
+        options.executablePath = "chromium";
+        options.args = ["--no-sandbox"];
+    }
+    const browser = await puppeteer.launch(options);
 
     const watchdog = new Watchdog(browser, config.watchdog.interval);
     watchdog.on("update", (offers: JourneyInfo[]) => {
