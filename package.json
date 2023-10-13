@@ -19,12 +19,14 @@
     "nodemailer": "^6.6.3",
     "puppeteer": "^16.0.0",
     "puppeteer-extra": "^3.1.18",
+    "uuid": "^9.0.1",
     "winston": "^3.8.1"
   },
   "devDependencies": {
     "@types/argparse": "^2.0.10",
     "@types/ejs": "^3.1.1",
     "@types/nodemailer": "^6.4.4",
+    "@types/uuid": "^9.0.5",
     "@typescript-eslint/eslint-plugin": "^5.32.0",
     "@typescript-eslint/parser": "^5.32.0",
     "eslint": "^8.21.0",

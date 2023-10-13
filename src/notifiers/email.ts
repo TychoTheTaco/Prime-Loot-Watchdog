@@ -40,18 +40,11 @@ export class EmailNotifier extends Notifier {
             // Prepare journeys
             const journeys: { [key: string]: any } = {};
             for (const offer of offers) {
-                const journeyOffer = offer['journey_offer'];
-                const journeyOfferId = journeyOffer['id'];
-
-                const journeyId = offer['journey']['id'];
-                if (!(journeyId in journeys)) {
-                    journeys[journeyId] = {'journey': offer['journey'], 'offers': []};
-                }
-                journeys[journeyId]['offers'].push({
-                    'id': journeyOfferId,
-                    'title': journeyOffer['assets']['title'],
-                    'subtitle': journeyOffer['assets']['subtitle'],
-                    'image': journeyOffer['assets']['card']['defaultMedia']['src1x'],
+                journeys[offer.item.id]['offers'].push({
+                    'id': offer.item.id,
+                    'title': "journeyOffer['assets']['title']",
+                    'subtitle': "journeyOffer['assets']['subtitle']",
+                    'image': "journeyOffer['assets']['card']['defaultMedia']['src1x']",
                     'url': offer['prime_offer']['content']['externalURL']
                 });
             }

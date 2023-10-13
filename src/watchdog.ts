@@ -4,56 +4,62 @@ import puppeteer, {Browser} from "puppeteer";
 
 const TimeoutError = puppeteer.errors.TimeoutError;
 
-import twitch, {Journey, JourneyOffer, PrimeOffer} from "./twitch.js";
+import {PrimeOffer, Client, Item, Journey} from "./twitch.js";
 import logger from "./logger.js";
+import fs from "node:fs";
+import * as path from "path";
 
 export interface JourneyInfo {
-    journey: Journey,
-    journey_offer: JourneyOffer,
-    prime_offer: PrimeOffer
+    prime_offer: PrimeOffer,
+    item: Item
 }
 
 export async function getPrimeOffers(browser: Browser): Promise<JourneyInfo[]> {
-    const primeOffers = await twitch.getPrimeOffers(browser);
+    const client = new Client(browser);
+    const primeOffers = await client.getPrimeOffers();
 
     const journeyOffersObject: { [key: string]: JourneyInfo } = {};
     for (const primeOffer of primeOffers) {
 
         if (primeOffer.deliveryMethod != "EXTERNAL_OFFER") {
-            logger.info("Ignoring non external offer: " + primeOffer.id + " " + primeOffer.title);
+            logger.debug("Ignoring non external offer: " + primeOffer.content.externalURL);
             continue;
         }
 
         // Ignore Luna offers
         if (primeOffer.content.externalURL.startsWith('https://www.amazon.com/luna')) {
-            logger.info("Ignoring luna offer: " + primeOffer.id + " " + primeOffer.title);
+            logger.debug("Ignoring luna offer: " + primeOffer.id + " " + primeOffer.title);
             continue;
         }
 
-        // Get the Journey details for this Prime offer
-        let journey;
+        // Get item details
+        let item = null;
         try {
-            journey = await twitch.getJourney(browser, primeOffer);
+            item = await client.getItemContext(primeOffer);
         } catch (error) {
             if (error instanceof TimeoutError) {
-                logger.error("Timeout when getting journey from URL: " + primeOffer.content.externalURL);
+                logger.error("Timed out while trying to get item context: " + primeOffer.content.externalURL);
                 continue;
             }
             throw error;
         }
-
-        for (const journeyOffer of journey.offers) {
-
-            // Ignore offers that are not available to claim
-            if (journeyOffer.self.claimStatus !== 'AVAILABLE') {
-                continue;
-            }
-
-            const journeyOfferId = journeyOffer.id;
-            if (!(journeyOfferId in journeyOffersObject)) {
-                journeyOffersObject[journeyOfferId] = {'journey': journey, 'journey_offer': journeyOffer, 'prime_offer': primeOffer};
-            }
+        if (!item) {
+            continue;
         }
+
+        // Ignore expired rewards
+        if (isExpired({
+            prime_offer: primeOffer,
+            item: item
+        })) {
+            continue;
+        }
+
+        journeyOffersObject[item.id] = {
+            prime_offer: primeOffer,
+            item: item
+        };
+
     }
     return Object.values(journeyOffersObject);
 }
@@ -61,6 +67,76 @@ export async function getPrimeOffers(browser: Browser): Promise<JourneyInfo[]> {
 export declare interface Watchdog {
     on(event: "update", listener: (offers: JourneyInfo[]) => void): this;
 }
+
+abstract class Database {
+
+    abstract add(journeyInfo: JourneyInfo): boolean;
+
+    abstract remove(journeyInfo: JourneyInfo): boolean;
+
+    abstract contains(journeyInfo: JourneyInfo): boolean;
+
+    abstract all(): JourneyInfo[];
+
+}
+
+class JsonDatabase extends Database {
+
+    #path: string;
+
+    #data: { [key: string]: any } = {};
+
+    constructor(path: string) {
+        super();
+        this.#path = path;
+        if (fs.existsSync(path)) {
+            this.#data = JSON.parse(fs.readFileSync(path, {encoding: 'utf-8'}));
+        }
+        if (!("items" in this.#data)) {
+            this.#data["items"] = {};
+        }
+    }
+
+    add(journeyInfo: JourneyInfo): boolean {
+        this.#data["items"][journeyInfo.item.id] = journeyInfo;
+        this.#save();
+        return false;
+    }
+
+    contains(journeyInfo: JourneyInfo): boolean {
+        return journeyInfo.item.id in this.#data["items"];
+    }
+
+    remove(journeyInfo: JourneyInfo): boolean {
+        delete this.#data["items"][journeyInfo.item.id];
+        this.#save();
+        return false;
+    }
+
+    all(): JourneyInfo[] {
+        const items = [];
+        const f = this.#data["items"];
+        for (const item in f) {
+            items.push(f[item]);
+        }
+        return items;
+    }
+
+    #save() {
+        fs.writeFileSync(this.#path, JSON.stringify(this.#data, null, 4), {encoding: "utf-8"});
+    }
+
+}
+
+const isExpired = (journeyInfo: JourneyInfo): boolean => {
+    for (const offer of journeyInfo.item.offers) {
+        const endTime = Date.parse(offer.endTime);
+        if (endTime > new Date().getTime()) {
+            return false;
+        }
+    }
+    return true;
+};
 
 export class Watchdog extends EventEmitter {
 
@@ -74,46 +150,57 @@ export class Watchdog extends EventEmitter {
 
     #timeoutId: NodeJS.Timeout | null = null;
 
-    readonly #offerIds: Set<string> = new Set<string>();
+    #database: Database;
 
-    constructor(browser: Browser, interval: number) {
+    constructor(browser: Browser, interval: number, database: Database = new JsonDatabase("database.json")) {
         super();
         this.#browser = browser;
         this.#pollingIntervalMinutes = interval;
+        this.#database = database;
     }
 
     start() {
-        if (!this.#timeoutId) {
-            const run = () => {
-                (async () => {
-                    // Get all prime offers
-                    logger.info("Fetching prime offers...");
-                    const primeOffers = await getPrimeOffers(this.#browser);
-                    logger.info("Found " + primeOffers.length + " offers.");
-
-                    // Find new prime offers
-                    const newPrimeOffers: JourneyInfo[] = [];
-                    for (const offer of primeOffers) {
-                        const offerId = offer.journey_offer.id;
-                        if (this.#offerIds.has(offerId)) {
-                            continue;
-                        }
-                        newPrimeOffers.push(offer);
-                        this.#offerIds.add(offerId);
-                    }
-                    logger.info("Found " + newPrimeOffers.length + " new offers.");
-
-                    // Notify listeners
-                    this.emit("update", newPrimeOffers);
-                })().catch((error) => {
-                    logger.error(error);
-                }).finally(() => {
-                    logger.info("Checking again in " + this.#pollingIntervalMinutes + " minutes.");
-                    this.#timeoutId = setTimeout(run, 1000 * 60 * this.#pollingIntervalMinutes);
-                });
-            };
-            run();
+        if (this.#timeoutId) {
+            return;
         }
+        const run = () => {
+            (async () => {
+
+                // Remove old items from database
+                const items = this.#database.all();
+                for (const item of items) {
+                    if (isExpired(item)) {
+                        this.#database.remove(item);
+                        logger.info("Removed item from database: " + item.item.id);
+                    }
+                }
+
+                // Get all prime offers
+                logger.info("Fetching prime offers...");
+                const primeOffers = await getPrimeOffers(this.#browser);
+                logger.info("Found " + primeOffers.length + " offers.");
+
+                // Find new prime offers
+                const newPrimeOffers: JourneyInfo[] = [];
+                for (const offer of primeOffers) {
+                    if (this.#database.contains(offer)) {
+                        continue;
+                    }
+                    newPrimeOffers.push(offer);
+                    this.#database.add(offer);
+                }
+                logger.info("Found " + newPrimeOffers.length + " new offers.");
+
+                // Notify listeners
+                this.emit("update", newPrimeOffers);
+            })().catch((error) => {
+                logger.error(error);
+            }).finally(() => {
+                logger.info("Checking again in " + this.#pollingIntervalMinutes + " minutes.");
+                this.#timeoutId = setTimeout(run, 1000 * 60 * this.#pollingIntervalMinutes);
+            });
+        };
+        run();
     }
 
     stop() {
