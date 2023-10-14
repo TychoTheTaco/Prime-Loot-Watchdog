@@ -6,3 +6,6 @@ dist
 
 # Config files
 config*.json
+
+# Database
+database.json

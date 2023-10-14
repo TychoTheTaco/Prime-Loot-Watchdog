@@ -138,6 +138,15 @@ const isExpired = (journeyInfo: JourneyInfo): boolean => {
     return true;
 };
 
+export type Filter = (journeyInfo: JourneyInfo) => boolean;
+
+export type Options = {
+    browser: Browser,
+    interval?: number,
+    database?: Database,
+    filter?: Filter
+}
+
 export class Watchdog extends EventEmitter {
 
     #browser: Browser;
@@ -146,17 +155,22 @@ export class Watchdog extends EventEmitter {
      * The number of minutes to wait before checking for new offers.
      * @private
      */
-    readonly #pollingIntervalMinutes: number;
+    readonly #pollingIntervalMinutes: number = 60;
 
     #timeoutId: NodeJS.Timeout | null = null;
 
     #database: Database;
 
-    constructor(browser: Browser, interval: number, database: Database = new JsonDatabase("database.json")) {
+    readonly #filter: Filter = () => {
+        return true;
+    };
+
+    constructor(options: Options) {
         super();
-        this.#browser = browser;
-        this.#pollingIntervalMinutes = interval;
-        this.#database = database;
+        this.#browser = options?.browser;
+        this.#pollingIntervalMinutes = options?.interval ?? this.#pollingIntervalMinutes;
+        this.#database = options?.database ?? new JsonDatabase("database.json");
+        this.#filter = options?.filter ?? this.#filter;
     }
 
     start() {
@@ -184,6 +198,9 @@ export class Watchdog extends EventEmitter {
                 const newPrimeOffers: JourneyInfo[] = [];
                 for (const offer of primeOffers) {
                     if (this.#database.contains(offer)) {
+                        continue;
+                    }
+                    if (!this.#filter(offer)) {
                         continue;
                     }
                     newPrimeOffers.push(offer);

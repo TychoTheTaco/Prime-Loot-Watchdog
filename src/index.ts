@@ -38,7 +38,8 @@ interface Config {
         discord?: {
             webhook_url: string
         }[]
-    }
+    },
+    blacklist?: [string]
 }
 
 function isInsideDocker(): boolean {
@@ -71,7 +72,17 @@ async function main() {
     }
     const browser = await puppeteer.launch(options);
 
-    const watchdog = new Watchdog(browser, config.watchdog.interval);
+    const filter = (journeyInfo: JourneyInfo) => {
+        const blacklist = config?.blacklist ?? [];
+        for (const item of blacklist) {
+            if (item === journeyInfo.item.game.assets.title) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    const watchdog = new Watchdog({browser: browser, interval: config.watchdog.interval, filter: filter});
     watchdog.on("update", (offers: JourneyInfo[]) => {
         for (const notifier of notifiers) {
             notifier.onUpdate(offers);
